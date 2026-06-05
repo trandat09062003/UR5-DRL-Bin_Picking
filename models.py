@@ -63,29 +63,30 @@ class reactive_net(nn.Module):
     def forward(self, input_color_data, input_depth_data, is_volatile=False, specific_rotation=-1):
 
         if is_volatile:
-            output_prob = []
-            interm_feat = []
+            with torch.no_grad():
+                output_prob = []
+                interm_feat = []
 
-            # Apply rotations to images
-            for rotate_idx in range(self.num_rotations):
-                rotate_theta = np.radians(rotate_idx*(360/self.num_rotations))
+                # Apply rotations to images
+                for rotate_idx in range(self.num_rotations):
+                    rotate_theta = np.radians(rotate_idx*(360/self.num_rotations))
 
-                # Compute sample grid for rotation BEFORE neural network
-                affine_mat_before = np.asarray([[np.cos(-rotate_theta), np.sin(-rotate_theta), 0],[-np.sin(-rotate_theta), np.cos(-rotate_theta), 0]])
-                affine_mat_before.shape = (2,3,1)
-                affine_mat_before = torch.from_numpy(affine_mat_before).permute(2,0,1).float()
-                if self.use_cuda:
-                    flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_color_data.size())
-                else:
-                    flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False), input_color_data.size())
+                    # Compute sample grid for rotation BEFORE neural network
+                    affine_mat_before = np.asarray([[np.cos(-rotate_theta), np.sin(-rotate_theta), 0],[-np.sin(-rotate_theta), np.cos(-rotate_theta), 0]])
+                    affine_mat_before.shape = (2,3,1)
+                    affine_mat_before = torch.from_numpy(affine_mat_before).permute(2,0,1).float()
+                    if self.use_cuda:
+                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_color_data.size(), align_corners=True)
+                    else:
+                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False), input_color_data.size(), align_corners=True)
 
-                # Rotate images clockwise
-                if self.use_cuda:
-                    rotate_color = F.grid_sample(Variable(input_color_data, volatile=True).cuda(), flow_grid_before, mode='nearest')
-                    rotate_depth = F.grid_sample(Variable(input_depth_data, volatile=True).cuda(), flow_grid_before, mode='nearest')
-                else:
-                    rotate_color = F.grid_sample(Variable(input_color_data, volatile=True), flow_grid_before, mode='nearest')
-                    rotate_depth = F.grid_sample(Variable(input_depth_data, volatile=True), flow_grid_before, mode='nearest')
+                    # Rotate images clockwise
+                    if self.use_cuda:
+                        rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
+                        rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
+                    else:
+                        rotate_color = F.grid_sample(Variable(input_color_data), flow_grid_before, mode='nearest', align_corners=True)
+                        rotate_depth = F.grid_sample(Variable(input_depth_data), flow_grid_before, mode='nearest', align_corners=True)
 
                 # Compute intermediate features
                 interm_push_color_feat = self.push_color_trunk.features(rotate_color)
@@ -226,17 +227,17 @@ class reinforcement_net(nn.Module):
                     affine_mat_before.shape = (2,3,1)
                     affine_mat_before = torch.from_numpy(affine_mat_before).permute(2,0,1).float()
                     if self.use_cuda:
-                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_color_data.size())
+                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False).cuda(), input_color_data.size(), align_corners=True)
                     else:
-                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False), input_color_data.size())
+                        flow_grid_before = F.affine_grid(Variable(affine_mat_before, requires_grad=False), input_color_data.size(), align_corners=True)
 
                     # Rotate images clockwise
                     if self.use_cuda:
-                        rotate_color = F.grid_sample(Variable(input_color_data, volatile=True).cuda(), flow_grid_before, mode='nearest')
-                        rotate_depth = F.grid_sample(Variable(input_depth_data, volatile=True).cuda(), flow_grid_before, mode='nearest')
+                        rotate_color = F.grid_sample(Variable(input_color_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
+                        rotate_depth = F.grid_sample(Variable(input_depth_data).cuda(), flow_grid_before, mode='nearest', align_corners=True)
                     else:
-                        rotate_color = F.grid_sample(Variable(input_color_data, volatile=True), flow_grid_before, mode='nearest')
-                        rotate_depth = F.grid_sample(Variable(input_depth_data, volatile=True), flow_grid_before, mode='nearest')
+                        rotate_color = F.grid_sample(Variable(input_color_data), flow_grid_before, mode='nearest', align_corners=True)
+                        rotate_depth = F.grid_sample(Variable(input_depth_data), flow_grid_before, mode='nearest', align_corners=True)
 
                     # Compute intermediate features
                     interm_push_color_feat = self.push_color_trunk.features(rotate_color)

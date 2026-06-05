@@ -162,13 +162,13 @@ class Robot(object):
         self.object_handles = []
         sim_obj_handles = []
         for object_idx in range(len(self.obj_mesh_ind)):
-            curr_mesh_file = os.path.join(self.obj_mesh_dir, self.mesh_list[self.obj_mesh_ind[object_idx]])
+            curr_mesh_file = os.path.abspath(os.path.join(self.obj_mesh_dir, self.mesh_list[self.obj_mesh_ind[object_idx]]))
             if self.is_testing and self.test_preset_cases:
                 curr_mesh_file = self.test_obj_mesh_files[object_idx]
             curr_shape_name = 'shape_%02d' % object_idx
             drop_x = (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.2) * np.random.random_sample() + self.workspace_limits[0][0] + 0.1
             drop_y = (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.2) * np.random.random_sample() + self.workspace_limits[1][0] + 0.1
-            object_position = [drop_x, drop_y, 0.15]
+            object_position = [drop_x, drop_y, 0.15 + object_idx * 0.05]
             object_orientation = [2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample()]
             if self.is_testing and self.test_preset_cases:
                 object_position = [self.test_obj_positions[object_idx][0], self.test_obj_positions[object_idx][1], self.test_obj_positions[object_idx][2]]
@@ -181,25 +181,61 @@ class Robot(object):
             curr_shape_handle = ret_ints[0]
             self.object_handles.append(curr_shape_handle)
             if not (self.is_testing and self.test_preset_cases):
-                time.sleep(2)
+                time.sleep(0.2)
+        
+        # Đợi toàn bộ vật thể rơi xuống và ổn định vị trí trên nền
+        print("[INFO] Đợi vật thể rơi xuống và ổn định trên sàn...")
+        time.sleep(3.0)
         self.prev_obj_positions = []
         self.obj_positions = []
 
 
     def restart_sim(self):
-
-        sim_ret, self.UR5_target_handle = vrep.simxGetObjectHandle(self.sim_client,'UR5_target',vrep.simx_opmode_blocking)
+        print("[DEBUG] restart_sim: starting...", flush=True)
+        # Get target handle
+        for i in range(50):
+            print(f"[DEBUG] restart_sim: querying UR5_target handle (attempt {i+1})...", flush=True)
+            sim_ret, self.UR5_target_handle = vrep.simxGetObjectHandle(self.sim_client, 'UR5_target', vrep.simx_opmode_blocking)
+            if sim_ret == 0:
+                break
+            time.sleep(0.1)
+        print(f"[DEBUG] restart_sim: UR5_target_handle={self.UR5_target_handle}, sim_ret={sim_ret}", flush=True)
+        
+        print("[DEBUG] restart_sim: setting object position...", flush=True)
         vrep.simxSetObjectPosition(self.sim_client, self.UR5_target_handle, -1, (-0.5,0,0.3), vrep.simx_opmode_blocking)
+        
+        print("[DEBUG] restart_sim: stopping simulation...", flush=True)
         vrep.simxStopSimulation(self.sim_client, vrep.simx_opmode_blocking)
+        time.sleep(1.5)
+        
+        print("[DEBUG] restart_sim: starting simulation...", flush=True)
         vrep.simxStartSimulation(self.sim_client, vrep.simx_opmode_blocking)
-        time.sleep(1)
-        sim_ret, self.RG2_tip_handle = vrep.simxGetObjectHandle(self.sim_client, 'UR5_tip', vrep.simx_opmode_blocking)
+        time.sleep(1.5)
+        
+        print("[DEBUG] restart_sim: querying UR5_tip handle...", flush=True)
+        # Get gripper tip handle
+        for i in range(50):
+            sim_ret, self.RG2_tip_handle = vrep.simxGetObjectHandle(self.sim_client, 'UR5_tip', vrep.simx_opmode_blocking)
+            if sim_ret == 0:
+                break
+            time.sleep(0.1)
+        print(f"[DEBUG] restart_sim: RG2_tip_handle={self.RG2_tip_handle}, sim_ret={sim_ret}", flush=True)
+            
+        print("[DEBUG] restart_sim: getting gripper position...", flush=True)
         sim_ret, gripper_position = vrep.simxGetObjectPosition(self.sim_client, self.RG2_tip_handle, -1, vrep.simx_opmode_blocking)
-        while gripper_position[2] > 0.4: # V-REP bug requiring multiple starts and stops to restart
+        print(f"[DEBUG] restart_sim: gripper_position={gripper_position}, sim_ret={sim_ret}", flush=True)
+        
+        # V-REP bug workaround with max retry limit of 10
+        attempts = 0
+        while gripper_position[2] > 0.4 and attempts < 10:
+            print(f"[INFO] Gripper height {gripper_position[2]:.3f} > 0.4, restarting simulation (attempt {attempts+1}/10)...", flush=True)
             vrep.simxStopSimulation(self.sim_client, vrep.simx_opmode_blocking)
+            time.sleep(1.5)
             vrep.simxStartSimulation(self.sim_client, vrep.simx_opmode_blocking)
-            time.sleep(1)
+            time.sleep(1.5)
             sim_ret, gripper_position = vrep.simxGetObjectPosition(self.sim_client, self.RG2_tip_handle, -1, vrep.simx_opmode_blocking)
+            attempts += 1
+        print("[DEBUG] restart_sim: finished!", flush=True)
 
 
     def check_sim(self):
@@ -305,9 +341,12 @@ class Robot(object):
 
             # Get color image from simulation
             sim_ret, resolution, raw_image = vrep.simxGetVisionSensorImage(self.sim_client, self.cam_handle, 0, vrep.simx_opmode_blocking)
+            while sim_ret != 0 or len(resolution) < 2:
+                sim_ret, resolution, raw_image = vrep.simxGetVisionSensorImage(self.sim_client, self.cam_handle, 0, vrep.simx_opmode_blocking)
+                time.sleep(0.1)
             color_img = np.asarray(raw_image)
             color_img.shape = (resolution[1], resolution[0], 3)
-            color_img = color_img.astype(np.float)/255
+            color_img = color_img.astype(float)/255
             color_img[color_img < 0] += 1
             color_img *= 255
             color_img = np.fliplr(color_img)
@@ -315,6 +354,9 @@ class Robot(object):
 
             # Get depth image from simulation
             sim_ret, resolution, depth_buffer = vrep.simxGetVisionSensorDepthBuffer(self.sim_client, self.cam_handle, vrep.simx_opmode_blocking)
+            while sim_ret != 0 or len(resolution) < 2:
+                sim_ret, resolution, depth_buffer = vrep.simxGetVisionSensorDepthBuffer(self.sim_client, self.cam_handle, vrep.simx_opmode_blocking)
+                time.sleep(0.1)
             depth_img = np.asarray(depth_buffer)
             depth_img.shape = (resolution[1], resolution[0])
             depth_img = np.fliplr(depth_img)
@@ -409,6 +451,7 @@ class Robot(object):
                 if new_gripper_joint_position >= gripper_joint_position:
                     return gripper_fully_closed
                 gripper_joint_position = new_gripper_joint_position
+                time.sleep(0.01)
             gripper_fully_closed = True
 
         else:
@@ -436,6 +479,7 @@ class Robot(object):
             vrep.simxSetJointTargetVelocity(self.sim_client, RG2_gripper_handle, gripper_motor_velocity, vrep.simx_opmode_blocking)
             while gripper_joint_position < 0.03: # Block until gripper is fully open
                 sim_ret, gripper_joint_position = vrep.simxGetJointPosition(self.sim_client, RG2_gripper_handle, vrep.simx_opmode_blocking)
+                time.sleep(0.01)
 
         else:
             self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -471,6 +515,7 @@ class Robot(object):
             for step_iter in range(num_move_steps):
                 vrep.simxSetObjectPosition(self.sim_client,self.UR5_target_handle,-1,(UR5_target_position[0] + move_step[0], UR5_target_position[1] + move_step[1], UR5_target_position[2] + move_step[2]),vrep.simx_opmode_blocking)
                 sim_ret, UR5_target_position = vrep.simxGetObjectPosition(self.sim_client,self.UR5_target_handle,-1,vrep.simx_opmode_blocking)
+                time.sleep(0.01)
             vrep.simxSetObjectPosition(self.sim_client,self.UR5_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)
 
         else:

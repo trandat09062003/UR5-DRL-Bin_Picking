@@ -1,7 +1,6 @@
 import struct
 import math
 import numpy as np
-import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -104,8 +103,9 @@ def pcwrite(xyz_pts, filename, rgb_pts=None):
 
 
 def get_affordance_vis(grasp_affordances, input_images, num_rotations, best_pix_ind):
+    import cv2
     vis = None
-    for vis_row in range(num_rotations/4):
+    for vis_row in range(int(num_rotations/4)):
         tmp_row_vis = None
         for vis_col in range(4):
             rotate_idx = vis_row*4+vis_col

@@ -56,7 +56,7 @@ class Trainer(object):
             self.future_reward_discount = future_reward_discount
 
             # Initialize Huber loss
-            self.criterion = torch.nn.SmoothL1Loss(reduce=False) # Huber loss
+            self.criterion = torch.nn.SmoothL1Loss(reduction='none') # Huber loss
             if self.use_cuda:
                 self.criterion = self.criterion.cuda()
 
