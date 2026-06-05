@@ -1,101 +1,92 @@
-# Visual Pushing and Grasping (VPG) with CoppeliaSim
+# Điều Khiển Robot UR5 Phối Hợp Đẩy và Gắp (VPG) Trong CoppeliaSim
 
-This repository provides PyTorch code for training and testing Visual Pushing and Grasping (VPG) policies using deep reinforcement learning in both simulation and real-world settings with a UR5 robot arm. 
+Dự án này triển khai thuật toán Học tăng cường sâu (Deep Reinforcement Learning - Q-Learning) để huấn luyện robot UR5 thực hiện các hành vi phối hợp Đẩy (Pushing) và Gắp (Grasping) vật thể trong môi trường mô phỏng CoppeliaSim V4.7.0.
 
-We have heavily optimized and refactored this codebase to support **CoppeliaSim V4.7.0+** on modern Linux systems, featuring robust process management, automated scene loading detection, self-healing retries, and stable gripper physics.
-
----
-
-## 🚀 Key Improvements & Features
-
-* **ZeroMQ Remote API Scene Detection:** Automatically detects when the CoppeliaSim scene is fully loaded and ready by querying the ZeroMQ Remote API (port `23000`), replacing flaky arbitrary timeouts.
-* **Self-Healing Grasp Attempts:** If a grasp fails, the system automatically resets the simulation, wipes the workspace, re-spawns objects staggered vertically from scratch, and tries again until a grasp succeeds.
-* **10-Second Auto-Shutdown:** Once a grasp succeeds, the program keeps the GUI open for 10 seconds for visual inspection and then automatically exits. No blocking prompts.
-* **Reliable Gripper Physics:** Added precise sleep intervals (`time.sleep(0.01)`) in joint actuation and gripper control loops to allow CoppeliaSim's physics engine to process joint state changes without CPU/API starvation.
-* **Vertical Spawning Staggering:** Objects are spawned at vertically offset heights (`0.15 + i * 0.05`) with a 3-second settling delay to prevent clipping/flying during initialization.
-* **Clean Process Lifecycle:** Automatically terminates lingering CoppeliaSim background processes and port listeners (`19997` and `23000`) on exit or failures to avoid port collision.
+Mã nguồn được kế thừa từ nghiên cứu *Visual Pushing and Grasping (VPG)* và được refactor lại để hoạt động ổn định trên các hệ thống Linux hiện đại sử dụng CoppeliaSim bản mới nhất.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🛠️ Các cải tiến & Tối ưu hóa kỹ thuật
 
-### 1. Prerequisites
-- **OS:** Ubuntu 22.04 LTS (or similar Linux environment)
-- **Python Environment:** Conda with Python 3.8+ (named `vpg` in this setup)
-- **Simulator:** CoppeliaSim Pro V4.7.0
+* **Tích hợp ZeroMQ Remote API:** Đồng bộ trạng thái simulator trực tiếp thông qua API ZMQ mới (mặc định cổng `23000`), giúp phát hiện chính xác thời điểm scene được nạp đầy đủ thay vì sử dụng thời gian chờ cố định.
+* **Cơ chế tự sửa lỗi (Self-Healing):** Nếu kịch bản gắp thử nghiệm thất bại, simulator sẽ tự reset, xóa sạch không gian làm việc, sinh lại vật thể dạng so le theo phương đứng (tránh va chạm) và tự động thử lại cho đến khi thành công.
+* **Tự động đóng tiến trình:** Sau khi thực hiện thành công kịch bản gắp demo, GUI simulator sẽ được giữ lại 10 giây để kiểm tra trực quan và tự động đóng, giải phóng tài nguyên.
+* **Khắc phục lỗi treo điều khiển (Deadlock):** Bổ sung cơ chế giám sát chuyển động của kẹp gắp (`stuck_count` trong `open_gripper`) và bảo vệ hàm di chuyển `move_to` giúp ngăn ngừa hoàn toàn hiện tượng đơ/treo luồng điều khiển trong quá trình huấn luyện dài hạn.
+* **Hỗ trợ huấn luyện nền (Headless & CUDA):** Chạy huấn luyện hoàn toàn trong nền thông qua cấu hình `DISPLAY=:1` kết hợp cờ chạy ẩn `-h` của CoppeliaSim, tận dụng GPU với tăng tốc CUDA.
+* **Khả năng tiếp tục huấn luyện (Resume):** Sửa lỗi chỉ số (index) khi tải tệp `clearance.log.txt` bị rỗng hoặc chỉ có 1 dòng, hỗ trợ tiếp tục huấn luyện mượt mà từ các checkpoint cũ bằng tham số `--continue_logging`.
 
-### 2. Environment Activation
-Activate the Conda environment before running any script:
+---
+
+## 💻 Cài đặt & Chuẩn bị môi trường
+
+### 1. Yêu cầu hệ thống
+* **Hệ điều hành:** Linux (đã thử nghiệm trên Ubuntu 22.04)
+* **Phần mềm mô phỏng:** CoppeliaSim V4.7.0
+* **Môi trường Python:** Conda (Python 3.8 trở lên)
+
+### 2. Thiết lập môi trường
+Kích hoạt môi trường conda chứa các thư viện cần thiết trước khi chạy:
 ```bash
 conda activate vpg
 ```
 
 ---
 
-## 📖 How to Run the Automated Grasping Demo
+## 🚀 Hướng dẫn chạy Demo (Gắp tự động)
 
-We provide a fully automated script that launches the simulator, loads the scene, spawns the blocks, performs grasp planning using object coordinates, resets if it fails, and automatically exits after 10 seconds of success.
+Chương trình cung cấp một kịch bản demo tự động (`run_one_grasp_gui.py`) giúp khởi động simulator, nạp robot, sinh vật thể so le, thực hiện gắp, tự động reset nếu trượt và thoát sau 10 giây thành công.
 
-To run it:
+Chạy lệnh sau:
 ```bash
 python run_one_grasp_gui.py
 ```
 
-### Flow of `run_one_grasp_gui.py`:
-1. Launches CoppeliaSim GUI with the scene `simulation/simulation.ttt`.
-2. Connects to the **ZeroMQ Remote API (port 23000)** to poll and verify the scene and UR5 robot are fully loaded.
-3. Spawns 10 block objects staggered vertically.
-4. Pauses for 3.0 seconds to let all objects fall and settle naturally on the workspace surface.
-5. Commands the UR5 robot arm to target and grasp an object in the workspace.
-6. **If successful:** Prints success, keeps GUI open for 10 seconds, then exits cleanly.
-7. **If failed:** Restarts the simulation scene, re-spawns objects from scratch, and retries.
-
 ---
 
-## 🏋️ Training VPG from Scratch
+## 🏋️ Huấn luyện mô hình từ đầu (Training)
 
-To start the full Deep Q-Learning training pipeline:
+Do liên kết tải các tệp trọng số đã huấn luyện trước (`vpg-original-sim-pretrained-10-obj.pth`) từ máy chủ gốc của Princeton hiện không hoạt động (lỗi 404), mô hình cần được huấn luyện từ đầu (`scratch`) trong môi trường mô phỏng.
 
-1. Launch CoppeliaSim and open the scene `simulation/simulation.ttt`.
-2. Run the main script in training mode:
+### 1. Chạy huấn luyện (Có giao diện)
 ```bash
 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
 ```
 
-To plot training results and performance over time:
+### 2. Chạy huấn luyện nền (Headless - Ẩn giao diện)
+Thích hợp cho việc huấn luyện thời gian dài trên server/GPU:
 ```bash
-python plot.py 'logs/YOUR-SESSION-DIRECTORY-NAME-HERE'
+# Khởi động simulator chạy ẩn
+DISPLAY=:1 /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt &
+
+# Chạy mã nguồn huấn luyện
+DISPLAY=:1 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+```
+
+### 3. Tiếp tục huấn luyện từ checkpoint cũ
+Sử dụng tham số chỉ định thư mục log và tệp checkpoint muốn tiếp tục:
+```bash
+DISPLAY=:1 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/2026-06-05.11:18:37 --load_snapshot --snapshot_file logs/2026-06-05.11:18:37/models/snapshot-backup.reinforcement.pth
+```
+
+### 4. Vẽ biểu đồ kết quả
+Để theo dõi hiệu suất huấn luyện (tỉ lệ gắp thành công theo thời gian):
+```bash
+python plot.py 'logs/THU_MUC_LOG_CUA_BAN'
 ```
 
 ---
 
-## 🔍 Troubleshooting & Process Cleanup
+## ⚠️ Khắc phục sự cố
 
-If the simulation gets stuck or ports `19997` / `23000` are already in use, clean all lingering python and simulator processes using:
+Nếu simulator bị treo hoặc các cổng kết nối API (`19997` hoặc `23000`) báo lỗi đang được sử dụng (Address already in use), tiến hành dọn sạch các tiến trình chạy ngầm bằng lệnh:
 
 ```bash
-# Force kill all running python and coppeliaSim processes
-kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "run_one_grasp_gui.py")
+kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py")
 ```
 
 ---
 
-## 📊 Project Status & Goals
-
-### Những thứ đã đạt được (Accomplishments):
-* **Tự động hóa hoàn toàn quy trình VPG:** Chuyển đổi và refactor thành công để tương thích hoàn hảo với **CoppeliaSim V4.7.0+** trên Ubuntu. Kết hợp ZeroMQ Remote API (để đồng bộ cảnh) và Legacy API (để truyền lệnh động học).
-* **Cơ chế Self-Healing & Tự khởi động lại:** Hệ thống tự động reset simulation, dọn sạch bin, re-spawn vật thể staggered và chạy lại nếu gắp trượt.
-* **Xử lý triệt để lỗi treo/đơ (Deadlock):** Đã sửa lỗi đơ trong hàm `open_gripper` và `move_to` bằng cách thêm kiểm tra hành trình khớp khớp và giới hạn stuck_count tự động ngắt vòng lặp.
-* **Hỗ trợ chạy Headless & Huấn luyện CUDA:** Huấn luyện mượt mà trên GPU GTX 1080 Ti dùng CUDA, tự động ghi logs, xuất heatmaps afforance predictions (`.push.png`, `.grasp.png`) ở mỗi iteration.
-* **Resume huấn luyện ổn định:** Sửa lỗi load file `clearance.log.txt` bị vỡ index trong `trainer.py` khi tiếp tục huấn luyện từ checkpoint cũ bằng tham số `--continue_logging`.
-
-### Những thứ chưa đạt được / Hạn chế (Limitations):
-* **Thiếu file trọng số pre-trained gốc:** Link tải file `.pth` gốc từ server của Princeton (`vpg-original-sim-pretrained-10-obj.pth`) hiện bị lỗi 404 và không có mirror chính thức.
-* **Giải pháp khắc phục:** Huấn luyện mô hình từ đầu (`--is_sim --method reinforcement`) bằng GPU. Tốc độ huấn luyện hiện đạt khoảng ~6-8s/iteration, mất khoảng 4-6 giờ để đạt độ chính xác cao tương đương bản gốc.
-
----
-
-## 📄 Reference
-This repository is based on the reference implementation for:
+## 📄 Tài liệu tham khảo
+Dự án được xây dựng dựa trên bài báo khoa học:
 **Learning Synergies between Pushing and Grasping with Self-supervised Deep Reinforcement Learning (IROS 2018)**
-[PDF](https://arxiv.org/pdf/1803.09956.pdf) | [Webpage](http://vpg.cs.princeton.edu/)
+[ArXiv PDF](https://arxiv.org/pdf/1803.09956.pdf) | [Project Webpage](http://vpg.cs.princeton.edu/)
