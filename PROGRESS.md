@@ -24,17 +24,32 @@ Tài liệu này ghi nhận chi tiết các hạng mục đã tối ưu hóa, c�
 - **Vấn đề:** Thời gian tải scene của CoppeliaSim thường không ổn định, nếu chỉ sử dụng lệnh `time.sleep` cứng dễ dẫn đến lỗi kết nối API khi simulator chưa sẵn sàng.
 - **Giải pháp:** Sử dụng thư viện ZeroMQ API (port 23000) để liên tục kiểm tra sự hiện diện của robot UR5 trong scene. Khi scene được xác nhận đã tải hoàn tất, chương trình mới kích hoạt luồng chạy chính.
 
+### 5. Khắc phục triệt để Lỗi treo Vòng lặp (Deadlocks) trong open_gripper & move_to
+- **Vấn đề:** Trong khi chạy huấn luyện dài hạn, đôi khi gripper bị kẹt vật lý hoặc simulator phản hồi chậm khiến vòng lặp `while gripper_joint_position < 0.03` trong `open_gripper` và vòng lặp chia bước chuyển động trong `move_to` bị treo vô hạn, khiến cả luồng điều khiển robot lẫn luồng huấn luyện Deep Q-Network bị đứng im.
+- **Giải pháp:** Cập nhật hàm `open_gripper` thêm bộ đếm `stuck_count` tự động thoát vòng lặp nếu má kẹp không mở thêm được nữa sau 0.5s. Cập nhật hàm `move_to` kiểm tra sớm khoảng cách di chuyển để tránh lỗi chia cho 0 hoặc lỗi NaN.
+
+### 6. Huấn luyện Reinforcement Learning Headless ổn định với CUDA
+- **Thành tựu:** Chạy huấn luyện Q-learning thành công ở chế độ headless (`-h` kết hợp `DISPLAY=:1`) trên GPU GTX 1080 Ti. Hệ thống tự động lưu checkpoints `.pth`, xuất logs và heatmaps affordance predictions (`.push.png`, `.grasp.png`) ở từng epoch.
+- **Khả năng Resume:** Đã khắc phục lỗi `IndexError` khi preload dữ liệu từ file `clearance.log.txt` (xử lý trường hợp file chỉ chứa 1 dòng / dữ liệu scalar). Giờ đây có thể tiếp tục huấn luyện bất kỳ lúc nào bằng lệnh:
+  ```bash
+  DISPLAY=:1 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/2026-06-05.11:18:37 --load_snapshot --snapshot_file logs/2026-06-05.11:18:37/models/snapshot-backup.reinforcement.pth
+  ```
+
 ---
 
 ## ❌ Những thứ chưa đạt được & Hướng phát triển (Limitations & Future Work)
 
-### 1. Phụ thuộc một phần vào Legacy Remote API
+### 1. Thiếu file trọng số pre-trained từ Princeton
+- Link tải file trọng số gốc `vpg-original-sim-pretrained-10-obj.pth` từ Princeton đã bị hỏng (404). Do đó, robot hiện tại chưa thể chạy thử nghiệm test-cases ngay lập tức với độ chính xác cao mà cần phải huấn luyện lại từ đầu.
+- **Hướng cải tiến:** Cho phép hệ thống huấn luyện liên tục trong khoảng 4-6 tiếng để mô hình tự học cách phối hợp đẩy và gắp tốt nhất.
+
+### 2. Phụ thuộc một phần vào Legacy Remote API
 - Hệ thống điều khiển chuyển động của cánh tay UR5 hiện tại vẫn phụ thuộc vào file `vrep.py` (Legacy Remote API qua cổng 19997). Mặc dù hoạt động ổn định nhờ cơ chế tối ưu luồng, về lâu dài nên chuyển hoàn toàn mã nguồn điều khiển robot sang ZeroMQ API để đạt tốc độ phản hồi và tính đồng bộ tối đa.
 
-### 2. Ngưỡng Nhận Diện Thành Công cố định (Hardcoded Grasp Threshold)
+### 3. Ngưỡng Nhận Diện Thành Công cố định (Hardcoded Grasp Threshold)
 - Lệnh `robot.check_grasp()` hiện đang kiểm tra thành công dựa trên khoảng cách cố định giữa 2 má kẹp gripper (`gripper_position < -0.045`). Đối với các khối vật thể có kích thước quá lớn hoặc quá nhỏ, ngưỡng này có thể cho kết quả sai lệch.
 - **Hướng cải tiến:** Cần đọc thông tin bounding box hoặc kích thước thực tế của mesh vật thể được sinh ra để điều chỉnh ngưỡng kiểm tra linh hoạt.
 
-### 3. Cảnh báo script PID cũ của Khớp điều khiển (Joint Control Callback Script)
+### 4. Cảnh báo script PID cũ của Khớp điều khiển (Joint Control Callback Script)
 - Scene mô phỏng `simulation.ttt` sử dụng kịch bản điều khiển PID cũ cho các khớp, CoppeliaSim phiên bản mới liên tục đưa ra cảnh báo lỗi thời (deprecated warnings).
 - **Hướng cải tiến:** Cần chuyển đổi script PID cũ này sang định dạng hàm callback khớp chuẩn mới (Joint Callback Function) của CoppeliaSim để tăng hiệu suất chạy mô phỏng.

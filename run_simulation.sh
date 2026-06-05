@@ -21,7 +21,7 @@ if [ $free_port -eq 1 ]; then
 fi
 
 echo "Starting CoppeliaSim headless with nohup..."
-nohup /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt > coppelia.log 2>&1 &
+nohup env DISPLAY=:1 /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt < /dev/null > coppelia.log 2>&1 &
 disown
 
 echo "Waiting 4 seconds for CoppeliaSim to initialize and bind port..."

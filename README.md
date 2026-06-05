@@ -80,6 +80,21 @@ kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "run_one_grasp_gui.py")
 
 ---
 
+## 📊 Project Status & Goals
+
+### Những thứ đã đạt được (Accomplishments):
+* **Tự động hóa hoàn toàn quy trình VPG:** Chuyển đổi và refactor thành công để tương thích hoàn hảo với **CoppeliaSim V4.7.0+** trên Ubuntu. Kết hợp ZeroMQ Remote API (để đồng bộ cảnh) và Legacy API (để truyền lệnh động học).
+* **Cơ chế Self-Healing & Tự khởi động lại:** Hệ thống tự động reset simulation, dọn sạch bin, re-spawn vật thể staggered và chạy lại nếu gắp trượt.
+* **Xử lý triệt để lỗi treo/đơ (Deadlock):** Đã sửa lỗi đơ trong hàm `open_gripper` và `move_to` bằng cách thêm kiểm tra hành trình khớp khớp và giới hạn stuck_count tự động ngắt vòng lặp.
+* **Hỗ trợ chạy Headless & Huấn luyện CUDA:** Huấn luyện mượt mà trên GPU GTX 1080 Ti dùng CUDA, tự động ghi logs, xuất heatmaps afforance predictions (`.push.png`, `.grasp.png`) ở mỗi iteration.
+* **Resume huấn luyện ổn định:** Sửa lỗi load file `clearance.log.txt` bị vỡ index trong `trainer.py` khi tiếp tục huấn luyện từ checkpoint cũ bằng tham số `--continue_logging`.
+
+### Những thứ chưa đạt được / Hạn chế (Limitations):
+* **Thiếu file trọng số pre-trained gốc:** Link tải file `.pth` gốc từ server của Princeton (`vpg-original-sim-pretrained-10-obj.pth`) hiện bị lỗi 404 và không có mirror chính thức.
+* **Giải pháp khắc phục:** Huấn luyện mô hình từ đầu (`--is_sim --method reinforcement`) bằng GPU. Tốc độ huấn luyện hiện đạt khoảng ~6-8s/iteration, mất khoảng 4-6 giờ để đạt độ chính xác cao tương đương bản gốc.
+
+---
+
 ## 📄 Reference
 This repository is based on the reference implementation for:
 **Learning Synergies between Pushing and Grasping with Self-supervised Deep Reinforcement Learning (IROS 2018)**

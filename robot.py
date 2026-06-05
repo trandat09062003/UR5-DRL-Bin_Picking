@@ -477,8 +477,18 @@ class Robot(object):
             sim_ret, gripper_joint_position = vrep.simxGetJointPosition(self.sim_client, RG2_gripper_handle, vrep.simx_opmode_blocking)
             vrep.simxSetJointForce(self.sim_client, RG2_gripper_handle, gripper_motor_force, vrep.simx_opmode_blocking)
             vrep.simxSetJointTargetVelocity(self.sim_client, RG2_gripper_handle, gripper_motor_velocity, vrep.simx_opmode_blocking)
+            
+            last_position = gripper_joint_position
+            stuck_count = 0
             while gripper_joint_position < 0.03: # Block until gripper is fully open
                 sim_ret, gripper_joint_position = vrep.simxGetJointPosition(self.sim_client, RG2_gripper_handle, vrep.simx_opmode_blocking)
+                if gripper_joint_position <= last_position:
+                    stuck_count += 1
+                else:
+                    stuck_count = 0
+                if stuck_count > 50: # Stuck for ~0.5 seconds
+                    break
+                last_position = gripper_joint_position
                 time.sleep(0.01)
 
         else:
@@ -509,6 +519,9 @@ class Robot(object):
 
             move_direction = np.asarray([tool_position[0] - UR5_target_position[0], tool_position[1] - UR5_target_position[1], tool_position[2] - UR5_target_position[2]])
             move_magnitude = np.linalg.norm(move_direction)
+            if move_magnitude < 1e-5:
+                vrep.simxSetObjectPosition(self.sim_client,self.UR5_target_handle,-1,(tool_position[0],tool_position[1],tool_position[2]),vrep.simx_opmode_blocking)
+                return
             move_step = 0.02*move_direction/move_magnitude
             num_move_steps = int(np.floor(move_magnitude/0.02))
 
