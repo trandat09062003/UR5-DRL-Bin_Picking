@@ -706,7 +706,7 @@ class Robot(object):
             # Move the grasped object elsewhere
             if grasp_success:
                 print('Di chuyển cánh tay thả vật vào hộp bên trái...')
-                bin_drop_position = [-0.5, 0.5, 0.3]
+                bin_drop_position = [-0.45, 0.55, 0.3]
                 self.move_to(bin_drop_position, None)
                 self.open_gripper()
                 time.sleep(0.5)
