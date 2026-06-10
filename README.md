@@ -38,8 +38,8 @@ Chạy vòng lặp huấn luyện chính (Đẩy và Gắp phối hợp) hiển 
 # Bước 1: Di chuyển vào thư mục dự án
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 
-# Bước 2: Chạy training có giao diện
-/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+# Bước 2: Chạy training có giao diện (Script này sẽ tự bật Simulator và chạy main.py)
+./run_training_gui.sh
 ```
 
 ### 3. Chạy Huấn Luyện Mô Hình Ẩn Giao Diện (Headless Training)
@@ -49,7 +49,7 @@ Thích hợp khi muốn chạy huấn luyện lâu dài ở chế độ nền (k
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 
 # Bước 2: Khởi động simulator chạy ẩn ở DISPLAY=:1
-DISPLAY=:1 /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt &
+DISPLAY=:1 "/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh" -h -f simulation/simulation.ttt &
 
 # Bước 3: Đợi 4 giây cho simulator khởi động xong, sau đó chạy mã nguồn huấn luyện
 DISPLAY=:1 /home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
@@ -74,7 +74,7 @@ cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 # 4. Chạy demo hoặc training bằng lệnh python thông thường
 python run_one_grasp_gui.py
 # hoặc
-python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+./run_training_gui.sh
 ```
 
 ---
@@ -94,6 +94,14 @@ Nếu tiến trình huấn luyện bị ngắt quãng, bạn có thể chạy ti
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 /home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/THU_MUC_CU --load_snapshot --snapshot_file logs/THU_MUC_CU/models/snapshot-backup.reinforcement.pth
 ```
+
+### 3. Chỉnh Sửa Scene (Giao diện 3D)
+Nếu bạn muốn mở phần mềm lên để thêm bớt đồ vật, thay đổi ánh sáng, chỉnh sửa bản đồ,... bạn chỉ cần chạy lệnh sau để mở giao diện:
+```bash
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+./edit_scene.sh
+```
+Sau khi phần mềm mở lên, bạn có thể chỉnh sửa và ấn `Ctrl + S` để lưu (vì đã cài bản Edu nên sẽ không bị báo lỗi yêu cầu License nữa).
 
 ---
 

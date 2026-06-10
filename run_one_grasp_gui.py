@@ -38,9 +38,9 @@ def terminate_process_group(proc):
 
 # 2. Hàm khởi động CoppeliaSim
 def launch_coppelia_sim(gui=True, scene_path=None):
-    coppelia_path = "/home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh"
+    coppelia_path = "/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh"
     if scene_path is None:
-        scene_path = os.path.abspath("simulation/simulation.ttt")
+        scene_path = "simulation/simulation.ttt"
     args = [coppelia_path, "-xnone"]
     if not gui:
         args.append("-h")
@@ -132,7 +132,7 @@ def wait_for_scene_load(timeout=30):
 
 # 5. Main
 def main():
-    original_scene = os.path.abspath("simulation/simulation.ttt")
+    original_scene = "simulation/simulation.ttt"
     max_attempts = 3
     success = False
     sim_process = None
