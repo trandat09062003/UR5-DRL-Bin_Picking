@@ -43,16 +43,13 @@ cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 ```
 
 ### 3. Chạy Huấn Luyện Mô Hình Ẩn Giao Diện (Headless Training)
-Thích hợp khi muốn chạy huấn luyện lâu dài ở chế độ nền (không mở cửa sổ CoppeliaSim đè lên màn hình làm việc):
+Thích hợp khi muốn chạy huấn luyện lâu dài ở chế độ nền (không mở cửa sổ CoppeliaSim đè lên màn hình làm việc). Tính năng **tự động học tiếp (Auto-Resume)** cũng đã được tích hợp trong lệnh này:
 ```bash
 # Bước 1: Di chuyển vào thư mục dự án
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 
-# Bước 2: Khởi động simulator chạy ẩn ở DISPLAY=:1
-DISPLAY=:1 "/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh" -h -f simulation/simulation.ttt &
-
-# Bước 3: Đợi 4 giây cho simulator khởi động xong, sau đó chạy mã nguồn huấn luyện
-DISPLAY=:1 /home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+# Bước 2: Chạy script tự động (tự mở simulator ẩn, tự nhận checkpoint và học tiếp)
+./run_training_headless.sh
 ```
 
 ---
@@ -89,11 +86,17 @@ cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 ```
 
 ### 2. Tiếp Tục Huấn Luyện Từ Checkpoint Cũ (Resume)
-Nếu tiến trình huấn luyện bị ngắt quãng, bạn có thể chạy tiếp tục từ checkpoint bằng cách chỉ định thư mục log cũ và file snapshot:
+Kể từ bây giờ, tính năng học tiếp nối đã được **tích hợp tự động** vào script.
+Mỗi khi bạn chạy lệnh `run_training_gui.sh` (hoặc nhấn nút Run), hệ thống sẽ tự động tìm kiếm bộ não (file `.pth`) được lưu ở lần học gần nhất trong thư mục `logs/`. 
+- Nếu tìm thấy, robot sẽ **tự động học tiếp**.
+- Nếu thư mục `logs/` trống, robot sẽ **bắt đầu học lại từ đầu**.
+
+Do đó, bạn **chỉ cần sử dụng một lệnh duy nhất** như mục huấn luyện bình thường:
 ```bash
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/THU_MUC_CU --load_snapshot --snapshot_file logs/THU_MUC_CU/models/snapshot-backup.reinforcement.pth
+./run_training_gui.sh
 ```
+*(Nếu bạn muốn xóa trí nhớ để bắt đầu lại từ số 0, chỉ cần xóa thư mục `logs/` đi là được).*
 
 ### 3. Chỉnh Sửa Scene (Giao diện 3D)
 Nếu bạn muốn mở phần mềm lên để thêm bớt đồ vật, thay đổi ánh sáng, chỉnh sửa bản đồ,... bạn chỉ cần chạy lệnh sau để mở giao diện:
