@@ -1,92 +1,110 @@
-# Điều Khiển Robot UR5 Phối Hợp Đẩy và Gắp (VPG) Trong CoppeliaSim
+# 🚀 Hướng Dẫn Chạy Mô Phỏng & Huấn Luyện UR5-VPG
 
-Dự án này triển khai thuật toán Học tăng cường sâu (Deep Reinforcement Learning - Q-Learning) để huấn luyện robot UR5 thực hiện các hành vi phối hợp Đẩy (Pushing) và Gắp (Grasping) vật thể trong môi trường mô phỏng CoppeliaSim V4.7.0.
-
-Mã nguồn được kế thừa từ nghiên cứu *Visual Pushing and Grasping (VPG)* và được refactor lại để hoạt động ổn định trên các hệ thống Linux hiện đại sử dụng CoppeliaSim bản mới nhất.
+Tài liệu này hướng dẫn chi tiết cách chạy demo mô phỏng và chạy huấn luyện học tăng cường (Deep Q-Learning) cho robot UR5 trong môi trường CoppeliaSim.
 
 ---
 
-## 🛠️ Các cải tiến & Tối ưu hóa kỹ thuật
+## ⚠️ LƯU Ý CỰC KỲ QUAN TRỌNG (ĐỌC TRƯỚC KHI CHẠY)
 
-* **Tích hợp ZeroMQ Remote API:** Đồng bộ trạng thái simulator trực tiếp thông qua API ZMQ mới (mặc định cổng `23000`), giúp phát hiện chính xác thời điểm scene được nạp đầy đủ thay vì sử dụng thời gian chờ cố định.
-* **Cơ chế tự sửa lỗi (Self-Healing):** Nếu kịch bản gắp thử nghiệm thất bại, simulator sẽ tự reset, xóa sạch không gian làm việc, sinh lại vật thể dạng so le theo phương đứng (tránh va chạm) và tự động thử lại cho đến khi thành công.
-* **Tự động đóng tiến trình:** Sau khi thực hiện thành công kịch bản gắp demo, GUI simulator sẽ được giữ lại 10 giây để kiểm tra trực quan và tự động đóng, giải phóng tài nguyên.
-* **Khắc phục lỗi treo điều khiển (Deadlock):** Bổ sung cơ chế giám sát chuyển động của kẹp gắp (`stuck_count` trong `open_gripper`) và bảo vệ hàm di chuyển `move_to` giúp ngăn ngừa hoàn toàn hiện tượng đơ/treo luồng điều khiển trong quá trình huấn luyện dài hạn.
-* **Hỗ trợ huấn luyện nền (Headless & CUDA):** Chạy huấn luyện hoàn toàn trong nền thông qua cấu hình `DISPLAY=:1` kết hợp cờ chạy ẩn `-h` của CoppeliaSim, tận dụng GPU với tăng tốc CUDA.
-* **Khả năng tiếp tục huấn luyện (Resume):** Sửa lỗi chỉ số (index) khi tải tệp `clearance.log.txt` bị rỗng hoặc chỉ có 1 dòng, hỗ trợ tiếp tục huấn luyện mượt mà từ các checkpoint cũ bằng tham số `--continue_logging`.
+1. **Phải di chuyển vào thư mục dự án**: 
+   Trước khi chạy bất kỳ câu lệnh nào, bạn **bắt buộc** phải mở terminal và di chuyển vào thư mục con `visual-pushing-grasping` bằng lệnh:
+   ```bash
+   cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+   ```
+   *Nếu không chạy lệnh `cd` này, Python sẽ báo lỗi không tìm thấy các file script (`main.py`, `run_one_grasp_gui.py`,...).*
+
+2. **Môi trường Python (Conda)**:
+   Dự án sử dụng môi trường Conda có tên là `vpg` nằm tại `/home/aics/miniconda3/envs/vpg`. Bạn có thể chạy theo **2 cách** dưới đây (Khuyên dùng **Cách 1** vì nhanh và không sợ lỗi đường dẫn Conda).
 
 ---
 
-## 💻 Cài đặt & Chuẩn bị môi trường
+## 📂 CÁCH 1: Chạy Trực Tiếp (Không Cần Kích Hoạt Conda) - KHUYÊN DÙNG
 
-### 1. Yêu cầu hệ thống
-* **Hệ điều hành:** Linux (đã thử nghiệm trên Ubuntu 22.04)
-* **Phần mềm mô phỏng:** CoppeliaSim V4.7.0
-* **Môi trường Python:** Conda (Python 3.8 trở lên)
+Cách này sử dụng trực tiếp đường dẫn tuyệt đối của trình biên dịch Python trong môi trường `vpg`, giúp tránh các lỗi cấu hình conda của terminal.
 
-### 2. Thiết lập môi trường
-Kích hoạt môi trường conda chứa các thư viện cần thiết trước khi chạy:
+### 1. Chạy Demo Gắp Vật Thử Nghiệm (Có Giao Diện)
+Kịch bản demo tự động khởi động simulator, sinh vật thể, điều khiển robot gắp 1 lần thành công, hiển thị kết quả trong 10 giây rồi tự động tắt.
 ```bash
+# Bước 1: Di chuyển vào thư mục dự án
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+
+# Bước 2: Chạy demo
+/home/aics/miniconda3/envs/vpg/bin/python run_one_grasp_gui.py
+```
+
+### 2. Chạy Huấn Luyện Mô Hình (Training - Có Giao Diện)
+Chạy vòng lặp huấn luyện chính (Đẩy và Gắp phối hợp) hiển thị trực quan trên màn hình:
+```bash
+# Bước 1: Di chuyển vào thư mục dự án
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+
+# Bước 2: Chạy training có giao diện
+/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+```
+
+### 3. Chạy Huấn Luyện Mô Hình Ẩn Giao Diện (Headless Training)
+Thích hợp khi muốn chạy huấn luyện lâu dài ở chế độ nền (không mở cửa sổ CoppeliaSim đè lên màn hình làm việc):
+```bash
+# Bước 1: Di chuyển vào thư mục dự án
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+
+# Bước 2: Khởi động simulator chạy ẩn ở DISPLAY=:1
+DISPLAY=:1 /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt &
+
+# Bước 3: Đợi 4 giây cho simulator khởi động xong, sau đó chạy mã nguồn huấn luyện
+DISPLAY=:1 /home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+```
+
+---
+
+## 🐍 CÁCH 2: Kích Hoạt Môi Trường Conda Rồi Chạy
+
+Nếu bạn muốn kích hoạt môi trường conda trước rồi chạy lệnh ngắn hơn:
+
+```bash
+# 1. Nạp cấu hình conda vào terminal hiện tại (nếu terminal chưa nhận lệnh conda)
+source /home/aics/miniconda3/etc/profile.d/conda.sh
+
+# 2. Kích hoạt môi trường vpg
 conda activate vpg
-```
 
----
+# 3. Di chuyển vào thư mục dự án
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
 
-## 🚀 Hướng dẫn chạy Demo (Gắp tự động)
-
-Chương trình cung cấp một kịch bản demo tự động (`run_one_grasp_gui.py`) giúp khởi động simulator, nạp robot, sinh vật thể so le, thực hiện gắp, tự động reset nếu trượt và thoát sau 10 giây thành công.
-
-Chạy lệnh sau:
-```bash
+# 4. Chạy demo hoặc training bằng lệnh python thông thường
 python run_one_grasp_gui.py
-```
-
----
-
-## 🏋️ Huấn luyện mô hình từ đầu (Training)
-
-Do liên kết tải các tệp trọng số đã huấn luyện trước (`vpg-original-sim-pretrained-10-obj.pth`) từ máy chủ gốc của Princeton hiện không hoạt động (lỗi 404), mô hình cần được huấn luyện từ đầu (`scratch`) trong môi trường mô phỏng.
-
-### 1. Chạy huấn luyện (Có giao diện)
-```bash
+# hoặc
 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
 ```
 
-### 2. Chạy huấn luyện nền (Headless - Ẩn giao diện)
-Thích hợp cho việc huấn luyện thời gian dài trên server/GPU:
-```bash
-# Khởi động simulator chạy ẩn
-DISPLAY=:1 /home/aics/CoppeliaSim_Pro_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh -h -f simulation/simulation.ttt &
+---
 
-# Chạy mã nguồn huấn luyện
-DISPLAY=:1 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations
+## 📊 Các Câu Lệnh Bổ Trợ Khác
+
+### 1. Vẽ Biểu Đồ Hiệu Suất Huấn Luyện (Plotting)
+Vẽ đồ thị tỉ lệ gắp thành công dựa trên thư mục log đã lưu (thay `TEN_THU_MUC_LOG` bằng tên thư mục thực tế trong thư mục `logs/` của bạn):
+```bash
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+/home/aics/miniconda3/envs/vpg/bin/python plot.py 'logs/TEN_THU_MUC_LOG'
 ```
 
-### 3. Tiếp tục huấn luyện từ checkpoint cũ
-Sử dụng tham số chỉ định thư mục log và tệp checkpoint muốn tiếp tục:
+### 2. Tiếp Tục Huấn Luyện Từ Checkpoint Cũ (Resume)
+Nếu tiến trình huấn luyện bị ngắt quãng, bạn có thể chạy tiếp tục từ checkpoint bằng cách chỉ định thư mục log cũ và file snapshot:
 ```bash
-DISPLAY=:1 python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/2026-06-05.11:18:37 --load_snapshot --snapshot_file logs/2026-06-05.11:18:37/models/snapshot-backup.reinforcement.pth
-```
-
-### 4. Vẽ biểu đồ kết quả
-Để theo dõi hiệu suất huấn luyện (tỉ lệ gắp thành công theo thời gian):
-```bash
-python plot.py 'logs/THU_MUC_LOG_CUA_BAN'
+cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations --continue_logging --logging_directory logs/THU_MUC_CU --load_snapshot --snapshot_file logs/THU_MUC_CU/models/snapshot-backup.reinforcement.pth
 ```
 
 ---
 
-## ⚠️ Khắc phục sự cố
+## 🛠️ Hướng Dẫn Khắc Phục Sự Cố (Troubleshooting)
 
-Nếu simulator bị treo hoặc các cổng kết nối API (`19997` hoặc `23000`) báo lỗi đang được sử dụng (Address already in use), tiến hành dọn sạch các tiến trình chạy ngầm bằng lệnh:
-
+### 1. Lỗi cổng kết nối đã được sử dụng (Address already in use / Connection Refused)
+Nếu CoppeliaSim bị tắt đột ngột, cổng API kết nối `19997` hoặc `23000` có thể bị treo. Hãy chạy lệnh sau để dọn sạch các tiến trình simulator và python đang chạy ngầm:
 ```bash
-kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py")
+kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py") $(pgrep -f "run_one_grasp_gui.py")
 ```
 
----
-
-## 📄 Tài liệu tham khảo
-Dự án được xây dựng dựa trên bài báo khoa học:
-**Learning Synergies between Pushing and Grasping with Self-supervised Deep Reinforcement Learning (IROS 2018)**
-[ArXiv PDF](https://arxiv.org/pdf/1803.09956.pdf) | [Project Webpage](http://vpg.cs.princeton.edu/)
+### 2. Lỗi `No such file or directory` khi chạy Python
+* **Nguyên nhân**: Bạn chưa chạy lệnh `cd` vào thư mục `visual-pushing-grasping`.
+* **Cách sửa**: Chạy lệnh `cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"` trước khi chạy lệnh gọi file `.py`.
