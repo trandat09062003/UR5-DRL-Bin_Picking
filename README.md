@@ -23,7 +23,7 @@ Tài liệu này hướng dẫn chi tiết cách chạy demo mô phỏng và ch�
 Cách này sử dụng trực tiếp đường dẫn tuyệt đối của trình biên dịch Python trong môi trường `vpg`, giúp tránh các lỗi cấu hình conda của terminal.
 
 ### 1. Chạy Demo Gắp Vật Thử Nghiệm (Có Giao Diện)
-Kịch bản demo tự động khởi động simulator, sinh vật thể, điều khiển robot gắp 1 lần thành công, hiển thị kết quả trong 10 giây rồi tự động tắt.
+Kịch bản demo tự động khởi động simulator, sinh ngẫu nhiên các vật thể, điều khiển robot **gắp liên tục tất cả các vật** và bỏ vào **cái thùng bên trái** cho tới khi trên bàn trống trơn, sau đó hiển thị kết quả trong 10 giây rồi tự tắt.
 ```bash
 # Bước 1: Di chuyển vào thư mục dự án
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"

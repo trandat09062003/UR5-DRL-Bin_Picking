@@ -179,21 +179,32 @@ def main():
                 test_preset_file="",
             )
             
-            # Vòng lặp gắp vật cho tới khi thành công
+            # Vòng lặp gắp vật cho tới khi gắp hết hoặc không còn vật
             grasp_attempt = 1
+            success_count = 0
             while True:
+                # Kiểm tra số lượng vật thể còn trong workspace
+                obj_positions = robot.get_obj_positions()
+                ws = robot.workspace_limits
+                objs_in_ws = [pos for pos in obj_positions if (ws[0][0] + 0.05 <= pos[0] <= ws[0][1] - 0.05) and (ws[1][0] + 0.05 <= pos[1] <= ws[1][1] - 0.05)]
+                
+                if len(objs_in_ws) == 0:
+                    print(f"\n[INFO] Đã gắp hết tất cả các vật thể vào thùng! Tổng cộng: {success_count} vật.")
+                    success = True
+                    break
+
                 print(f"\n[INFO] === THỰC HIỆN GRASP LẦN THỨ {grasp_attempt} ===")
                 grasp_success = perform_one_grasp(robot)
                 if grasp_success:
-                    print(f"[SUCCESS] Gắp thành công ở lần thử thứ {grasp_attempt}!")
-                    success = True
-                    break
+                    success_count += 1
+                    print(f"[SUCCESS] Gắp thành công! Tổng số đã gắp: {success_count}")
                 else:
-                    print(f"[WARNING] Gắp trượt ở lần thử thứ {grasp_attempt}. Tiến hành reset simulation và đặt lại đồ vật từ đầu...")
-                    robot.restart_sim()
-                    robot.add_objects()
-                    grasp_attempt += 1
-                    time.sleep(1)
+                    print(f"[WARNING] Gắp trượt ở lần thử thứ {grasp_attempt}.")
+                
+                # Trở về vị trí an toàn trước khi gắp tiếp
+                robot.move_to([-0.5, 0.0, 0.3], None)
+                grasp_attempt += 1
+                time.sleep(1)
 
             signal.alarm(0)  # Tắt alarm khi thành công
             break
