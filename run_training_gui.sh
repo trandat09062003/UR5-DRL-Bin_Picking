@@ -3,8 +3,8 @@ echo "[INFO] Đang khởi động CoppeliaSim (GUI)..."
 "/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh" -f simulation/simulation.ttt > coppelia.log 2>&1 &
 SIM_PID=$!
 
-echo "[INFO] Chờ 5 giây cho Simulator khởi động và mở cổng 19997..."
-sleep 5
+echo "[INFO] Chờ 15 giây cho Simulator tải xong hoàn toàn môi trường (Scene)..."
+sleep 15
 
 # ==== LOGIC TỰ ĐỘNG HỌC TIẾP (AUTO-RESUME) ====
 LATEST_LOG=$(ls -td logs/*/ 2>/dev/null | head -1)

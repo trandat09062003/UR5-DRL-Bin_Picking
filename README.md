@@ -110,12 +110,22 @@ Sau khi phần mềm mở lên, bạn có thể chỉnh sửa và ấn `Ctrl + S
 
 ## 🛠️ Hướng Dẫn Khắc Phục Sự Cố (Troubleshooting)
 
-### 1. Lỗi cổng kết nối đã được sử dụng (Address already in use / Connection Refused)
-Nếu CoppeliaSim bị tắt đột ngột, cổng API kết nối `19997` hoặc `23000` có thể bị treo. Hãy chạy lệnh sau để dọn sạch các tiến trình simulator và python đang chạy ngầm:
+### 1. Lỗi bị kẹt lệnh, không hiện vật thể hoặc Connection Refused
+**Nguyên nhân:** Lỗi này 99% xảy ra do bạn đã bấm `Ctrl + C` để ngắt ngang một tiến trình đang chạy. Việc tắt đột ngột này sẽ làm phần mềm CoppeliaSim và các kịch bản python bị kẹt chạy ngầm (Zombie process), gây xung đột cổng mạng ở lần chạy tiếp theo.
+
+**Cách khắc phục:** Chạy lệnh dưới đây để "tiêu diệt" sạch sẽ toàn bộ các ứng dụng kẹt ngầm (bao gồm cả các launcher của phần mềm), sau đó bạn có thể chạy lại bình thường:
 ```bash
-kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py") $(pgrep -f "run_one_grasp_gui.py")
+kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py") $(pgrep -f "run_one_grasp_gui.py") $(pgrep -f "pythonLauncher.py")
 ```
 
 ### 2. Lỗi `No such file or directory` khi chạy Python
 * **Nguyên nhân**: Bạn chưa chạy lệnh `cd` vào thư mục `visual-pushing-grasping`.
 * **Cách sửa**: Chạy lệnh `cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"` trước khi chạy lệnh gọi file `.py`.
+
+### 3. Lỗi `No module named 'coppeliasim_zmqremoteapi_client'` hoặc `ModuleNotFoundError`
+* **Nguyên nhân**: Bạn đang dùng lệnh `python` mặc định của hệ thống thay vì dùng môi trường ảo `vpg` (nơi chứa các thư viện điều khiển Robot).
+* **Cách sửa**: Hãy chắc chắn rằng bạn sử dụng đúng đường dẫn Python của môi trường ảo để chạy:
+```bash
+/home/aics/miniconda3/envs/vpg/bin/python run_one_grasp_gui.py
+```
+*(Hoặc gõ `conda activate vpg` trước khi chạy lệnh `python run_one_grasp_gui.py`)*

@@ -1,14 +1,14 @@
 #!/bin/bash
 echo "[INFO] Đang khởi động CoppeliaSim (Headless Mode)..."
-DISPLAY=:1 "/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh" -h -f simulation/simulation.ttt > coppelia_headless.log 2>&1 &
+"/home/aics/Màn hình nền/Rl_Bin_Picing/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04/coppeliaSim.sh" -h -f simulation/simulation.ttt > coppelia_headless.log 2>&1 &
 SIM_PID=$!
 
-echo "[INFO] Chờ 5 giây cho Simulator khởi động và mở cổng 19997..."
-sleep 5
+echo "[INFO] Chờ 15 giây cho Simulator tải xong hoàn toàn môi trường (Scene)..."
+sleep 15
 
 # ==== LOGIC TỰ ĐỘNG HỌC TIẾP (AUTO-RESUME) ====
 LATEST_LOG=$(ls -td logs/*/ 2>/dev/null | head -1)
-CMD="DISPLAY=:1 /home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations"
+CMD="/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --push_rewards --experience_replay --explore_rate_decay --save_visualizations"
 
 if [ ! -z "$LATEST_LOG" ]; then
     SNAPSHOT_FILE="${LATEST_LOG}models/snapshot-backup.reinforcement.pth"

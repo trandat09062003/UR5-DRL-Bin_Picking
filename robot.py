@@ -166,8 +166,11 @@ class Robot(object):
             if self.is_testing and self.test_preset_cases:
                 curr_mesh_file = self.test_obj_mesh_files[object_idx]
             curr_shape_name = 'shape_%02d' % object_idx
-            drop_x = (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.2) * np.random.random_sample() + self.workspace_limits[0][0] + 0.1
-            drop_y = (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.2) * np.random.random_sample() + self.workspace_limits[1][0] + 0.1
+            # Tinh chỉnh tọa độ rơi để vật lọt vào giữa hộp (âm là sang phải, dương là sang trái)
+            OFFSET_X = 0.0
+            OFFSET_Y = -0.08
+            drop_x = (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.2) * np.random.random_sample() + self.workspace_limits[0][0] + 0.1 + OFFSET_X
+            drop_y = (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.2) * np.random.random_sample() + self.workspace_limits[1][0] + 0.1 + OFFSET_Y
             object_position = [drop_x, drop_y, 0.15 + object_idx * 0.05]
             object_orientation = [2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample()]
             if self.is_testing and self.test_preset_cases:
@@ -193,9 +196,18 @@ class Robot(object):
     def restart_sim(self):
         print("[DEBUG] restart_sim: starting...", flush=True)
         # Get target handle
+        target_names_to_try = ['UR5_target', '/UR5_target', '/UR5/UR5_target']
+        self.UR5_target_handle = -1
+        sim_ret = -1
         for i in range(50):
             print(f"[DEBUG] restart_sim: querying UR5_target handle (attempt {i+1})...", flush=True)
-            sim_ret, self.UR5_target_handle = vrep.simxGetObjectHandle(self.sim_client, 'UR5_target', vrep.simx_opmode_blocking)
+            for name in target_names_to_try:
+                ret, handle = vrep.simxGetObjectHandle(self.sim_client, name, vrep.simx_opmode_blocking)
+                if ret == 0:
+                    sim_ret = ret
+                    self.UR5_target_handle = handle
+                    print(f"[DEBUG] restart_sim: Successfully found object with name '{name}'")
+                    break
             if sim_ret == 0:
                 break
             time.sleep(0.1)
@@ -214,8 +226,17 @@ class Robot(object):
         
         print("[DEBUG] restart_sim: querying UR5_tip handle...", flush=True)
         # Get gripper tip handle
+        tip_names_to_try = ['UR5_tip', '/UR5_tip', '/UR5/UR5_tip']
+        self.RG2_tip_handle = -1
+        sim_ret = -1
         for i in range(50):
-            sim_ret, self.RG2_tip_handle = vrep.simxGetObjectHandle(self.sim_client, 'UR5_tip', vrep.simx_opmode_blocking)
+            for name in tip_names_to_try:
+                ret, handle = vrep.simxGetObjectHandle(self.sim_client, name, vrep.simx_opmode_blocking)
+                if ret == 0:
+                    sim_ret = ret
+                    self.RG2_tip_handle = handle
+                    print(f"[DEBUG] restart_sim: Successfully found object with name '{name}'")
+                    break
             if sim_ret == 0:
                 break
             time.sleep(0.1)
@@ -326,8 +347,11 @@ class Robot(object):
         for object_handle in self.object_handles:
 
             # Drop object at random x,y location and random orientation in robot workspace
-            drop_x = (workspace_limits[0][1] - workspace_limits[0][0] - 0.2) * np.random.random_sample() + workspace_limits[0][0] + 0.1
-            drop_y = (workspace_limits[1][1] - workspace_limits[1][0] - 0.2) * np.random.random_sample() + workspace_limits[1][0] + 0.1
+            # Tinh chỉnh tọa độ rơi để vật lọt vào giữa hộp (âm là sang phải, dương là sang trái)
+            OFFSET_X = 0.0
+            OFFSET_Y = -0.08
+            drop_x = (workspace_limits[0][1] - workspace_limits[0][0] - 0.2) * np.random.random_sample() + workspace_limits[0][0] + 0.1 + OFFSET_X
+            drop_y = (workspace_limits[1][1] - workspace_limits[1][0] - 0.2) * np.random.random_sample() + workspace_limits[1][0] + 0.1 + OFFSET_Y
             object_position = [drop_x, drop_y, 0.15]
             object_orientation = [2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample(), 2*np.pi*np.random.random_sample()]
             vrep.simxSetObjectPosition(self.sim_client, object_handle, -1, object_position, vrep.simx_opmode_blocking)
