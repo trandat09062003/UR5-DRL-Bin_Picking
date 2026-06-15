@@ -37,7 +37,8 @@ class Robot(object):
 
             # Randomly choose objects to add to scene
             self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
-            self.obj_mesh_color = self.color_space[np.asarray(range(self.num_obj)) % 10, :]
+            color_indices = np.random.randint(0, len(self.color_space), size=self.num_obj)
+            self.obj_mesh_color = self.color_space[color_indices, :]
 
             # Make sure to have the server side running in V-REP:
             # in a child script of a V-REP scene, add following command
@@ -157,6 +158,11 @@ class Robot(object):
 
 
     def add_objects(self):
+
+        if not (self.is_testing and getattr(self, 'test_preset_cases', False)):
+            self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
+            color_indices = np.random.randint(0, len(self.color_space), size=self.num_obj)
+            self.obj_mesh_color = self.color_space[color_indices, :]
 
         # Add each object to robot workspace at x,y location and orientation (random or pre-loaded)
         self.object_handles = []
@@ -349,7 +355,7 @@ class Robot(object):
             # Drop object at random x,y location and random orientation in robot workspace
             # Tinh chỉnh tọa độ rơi để vật lọt vào giữa hộp (âm là sang phải, dương là sang trái)
             OFFSET_X = 0.0
-            OFFSET_Y = -0.08
+            OFFSET_Y = -0.15 # Giảm thêm để dịch sang phải nhiều hơn (trước là -0.08)
             drop_x = (workspace_limits[0][1] - workspace_limits[0][0] - 0.2) * np.random.random_sample() + workspace_limits[0][0] + 0.1 + OFFSET_X
             drop_y = (workspace_limits[1][1] - workspace_limits[1][0] - 0.2) * np.random.random_sample() + workspace_limits[1][0] + 0.1 + OFFSET_Y
             object_position = [drop_x, drop_y, 0.15]
