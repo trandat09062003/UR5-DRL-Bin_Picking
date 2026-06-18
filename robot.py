@@ -10,7 +10,7 @@ from simulation import vrep
 class Robot(object):
     def __init__(self, is_sim, obj_mesh_dir, num_obj, workspace_limits,
                  tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
-                 is_testing, test_preset_cases, test_preset_file):
+                 is_testing, test_preset_cases, test_preset_file, specific_obj=-1):
 
         self.is_sim = is_sim
         self.workspace_limits = workspace_limits
@@ -34,9 +34,14 @@ class Robot(object):
             self.obj_mesh_dir = obj_mesh_dir
             self.num_obj = num_obj
             self.mesh_list = os.listdir(self.obj_mesh_dir)
+            self.mesh_list.sort() # Sort to have deterministic indices
+            self.specific_obj = specific_obj
 
             # Randomly choose objects to add to scene
-            self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
+            if self.specific_obj is not None and self.specific_obj >= 0:
+                self.obj_mesh_ind = np.ones(self.num_obj, dtype=int) * self.specific_obj
+            else:
+                self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
             color_indices = np.random.randint(0, len(self.color_space), size=self.num_obj)
             self.obj_mesh_color = self.color_space[color_indices, :]
 
@@ -160,7 +165,10 @@ class Robot(object):
     def add_objects(self):
 
         if not (self.is_testing and getattr(self, 'test_preset_cases', False)):
-            self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
+            if self.specific_obj is not None and self.specific_obj >= 0:
+                self.obj_mesh_ind = np.ones(self.num_obj, dtype=int) * self.specific_obj
+            else:
+                self.obj_mesh_ind = np.random.randint(0, len(self.mesh_list), size=self.num_obj)
             color_indices = np.random.randint(0, len(self.color_space), size=self.num_obj)
             self.obj_mesh_color = self.color_space[color_indices, :]
 

@@ -1,131 +1,67 @@
-# 🚀 Hướng Dẫn Chạy Mô Phỏng & Huấn Luyện UR5-VPG
+# 🚀 Hướng Dẫn Mô Phỏng & Huấn Luyện UR5-VPG (Visual Pushing & Grasping)
 
-Tài liệu này hướng dẫn chi tiết cách chạy demo mô phỏng và chạy huấn luyện học tăng cường (Deep Q-Learning) cho robot UR5 trong môi trường CoppeliaSim.
-
----
-
-## ⚠️ LƯU Ý CỰC KỲ QUAN TRỌNG (ĐỌC TRƯỚC KHI CHẠY)
-
-1. **Phải di chuyển vào thư mục dự án**: 
-   Trước khi chạy bất kỳ câu lệnh nào, bạn **bắt buộc** phải mở terminal và di chuyển vào thư mục con `visual-pushing-grasping` bằng lệnh:
-   ```bash
-   cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-   ```
-   *Nếu không chạy lệnh `cd` này, Python sẽ báo lỗi không tìm thấy các file script (`main.py`, `run_one_grasp_gui.py`,...).*
-
-2. **Môi trường Python (Conda)**:
-   Dự án sử dụng môi trường Conda có tên là `vpg` nằm tại `/home/aics/miniconda3/envs/vpg`. Bạn có thể chạy theo **2 cách** dưới đây (Khuyên dùng **Cách 1** vì nhanh và không sợ lỗi đường dẫn Conda).
+Tài liệu này cung cấp tài liệu kỹ thuật chi tiết về cấu trúc dự án và cách vận hành quy trình học tăng cường (Deep Q-Learning) cho robot cánh tay UR5 thực hiện tác vụ Bin Picking trong môi trường CoppeliaSim.
 
 ---
 
-## 📂 CÁCH 1: Chạy Trực Tiếp (Không Cần Kích Hoạt Conda) - KHUYÊN DÙNG
+## 📂 1. CẤU TRÚC THƯ MỤC VÀ TỔ CHỨC FILE
 
-Cách này sử dụng trực tiếp đường dẫn tuyệt đối của trình biên dịch Python trong môi trường `vpg`, giúp tránh các lỗi cấu hình conda của terminal.
+Dự án đã được quy hoạch lại để chuyên nghiệp và dễ bảo trì hơn. Các tệp tin được phân loại theo chức năng:
 
-### 1. Chạy Demo Gắp Vật Thử Nghiệm (Có Giao Diện)
-Kịch bản demo tự động khởi động simulator, sinh ngẫu nhiên các vật thể, điều khiển robot **gắp liên tục tất cả các vật** và bỏ vào **cái thùng bên trái** cho tới khi trên bàn trống trơn, sau đó hiển thị kết quả trong 10 giây rồi tự tắt.
-```bash
-# Bước 1: Di chuyển vào thư mục dự án
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+### 1.1. Các File Chạy Chính (Entry-point Scripts)
+Đây là các bash script bạn dùng để tương tác nhanh với hệ thống:
+*   `run_training.sh`: Khởi chạy quá trình Train. Hệ thống sẽ luôn thả **DUY NHẤT 1 vật thể ngẫu nhiên** (màu sắc/hình khối bất kỳ) mỗi đợt để robot luyện tập từ từ, tránh gây nhiễu môi trường.
+*   `run_test.sh`: Khởi chạy chế độ Kiểm thử (Test). Hệ thống sẽ rải cùng lúc **10 VẬT THỂ LỘN XỘN** xuống bàn. Robot sẽ phải dùng model đã học được để lần lượt gắp bỏ hết cả 10 vật này vào thùng (thực hiện 30 lượt test).
+*   `edit_scene.sh`: Mở CoppeliaSim ở chế độ chỉnh sửa giao diện 3D (Scene Editor).
 
-# Bước 2: Chạy demo
-/home/aics/miniconda3/envs/vpg/bin/python run_one_grasp_gui.py
-```
+### 1.2. Thư Mục Mã Nguồn Python
+*   `main.py`, `robot.py`, `trainer.py`, `models.py`: Chứa lõi thuật toán học tăng cường (RL), cấu trúc mạng Nơ-ron và logic kết nối điều khiển cánh tay robot.
+*   `logger.py`, `utils.py`: Lưu trữ log, biểu đồ, và các hàm hỗ trợ tính toán ảnh RGB-D.
+*   `evaluate.py`, `plot.py`: Công cụ vẽ biểu đồ tỷ lệ thành công và phân tích log sau khi Test.
 
-### 2. Chạy Huấn Luyện Mô Hình (Training - Có Giao Diện)
-Chạy vòng lặp huấn luyện chính (Đẩy và Gắp phối hợp) hiển thị trực quan trên màn hình:
-```bash
-# Bước 1: Di chuyển vào thư mục dự án
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-
-# Bước 2: Chạy training có giao diện (Script này sẽ tự bật Simulator và chạy main.py)
-./run_training_gui.sh
-```
-
-### 3. Chạy Huấn Luyện Mô Hình Ẩn Giao Diện (Headless Training)
-Thích hợp khi muốn chạy huấn luyện lâu dài ở chế độ nền (không mở cửa sổ CoppeliaSim đè lên màn hình làm việc). Tính năng **tự động học tiếp (Auto-Resume)** cũng đã được tích hợp trong lệnh này:
-```bash
-# Bước 1: Di chuyển vào thư mục dự án
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-
-# Bước 2: Chạy script tự động (tự mở simulator ẩn, tự nhận checkpoint và học tiếp)
-./run_training_headless.sh
-```
+### 1.3. Thư Mục Dữ Liệu
+*   `logs/`: Nơi tự động lưu các checkpoint (model não bộ của robot) và dữ liệu ảnh/độ sâu mỗi vòng chạy.
+*   `objects/blocks/`: Chứa các bản thiết kế 3D (file `.obj`) đại diện cho các vật thể mà robot cần gắp.
+*   `simulation/`: Chứa file `simulation.ttt` (bản đồ môi trường vật lý trong CoppeliaSim).
+*   `tools/`: Thư mục lưu các script tiện ích bổ trợ như căn chỉnh camera (`calibrate.py`), kiểm tra độ va chạm (`touch.py`), và gắp thủ công 1 lần (`run_one_grasp_gui.py`).
 
 ---
 
-## 🐍 CÁCH 2: Kích Hoạt Môi Trường Conda Rồi Chạy
+## 🚦 2. HƯỚNG DẪN SỬ DỤNG
 
-Nếu bạn muốn kích hoạt môi trường conda trước rồi chạy lệnh ngắn hơn:
-
+### Bước Chuẩn Bị (Bắt Buộc)
+Mở terminal và luôn đảm bảo bạn đang đứng ở thư mục gốc của project trước khi chạy bất kỳ script nào:
 ```bash
-# 1. Nạp cấu hình conda vào terminal hiện tại (nếu terminal chưa nhận lệnh conda)
-source /home/aics/miniconda3/etc/profile.d/conda.sh
-
-# 2. Kích hoạt môi trường vpg
-conda activate vpg
-
-# 3. Di chuyển vào thư mục dự án
 cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
+```
 
-# 4. Chạy demo hoặc training bằng lệnh python thông thường
-python run_one_grasp_gui.py
-# hoặc
-./run_training_gui.sh
+### 2.1. Quá Trình Huấn Luyện (Training)
+Tất cả các script học đã được tích hợp tính năng **Auto-Resume** (tự động phát hiện model cũ và học tiếp). Nếu bạn muốn bắt đầu lại từ đầu (từ con số 0), hãy xóa thư mục `logs/`.
+
+Chạy lệnh sau để bắt đầu huấn luyện với 1 vật thể ngẫu nhiên:
+```bash
+./run_training.sh
+```
+
+### 2.2. Kiểm Thử và Đánh Giá (Testing & Evaluation)
+Sau khi huấn luyện thành công (hoặc đạt được độ chính xác mong muốn), chạy lệnh dưới đây để kiểm tra thực tế khả năng dọn dẹp đống 10 vật thể của robot:
+```bash
+./run_test.sh
+```
+*Lưu ý: Mặc định script sẽ chạy 30 lượt. Mỗi lượt yêu cầu dọn sạch 10 vật.*
+
+Sau khi Test xong, dùng lệnh sau để vẽ biểu đồ kết quả:
+```bash
+/home/aics/miniconda3/envs/vpg/bin/python plot.py 'logs/TÊN_THƯ_MỤC_CẦN_VẼ'
 ```
 
 ---
 
-## 📊 Các Câu Lệnh Bổ Trợ Khác
+## 🛠️ 3. XỬ LÝ SỰ CỐ (TROUBLESHOOTING)
 
-### 1. Vẽ Biểu Đồ Hiệu Suất Huấn Luyện (Plotting)
-Vẽ đồ thị tỉ lệ gắp thành công dựa trên thư mục log đã lưu (thay `TEN_THU_MUC_LOG` bằng tên thư mục thực tế trong thư mục `logs/` của bạn):
+**Lỗi ModuleNotFoundError (Không nhận diện môi trường Conda)**
+Nếu bạn quyết định không dùng bash script mà gõ lệnh `python main.py` trực tiếp, bạn bắt buộc phải chỉ định đường dẫn môi trường:
 ```bash
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-/home/aics/miniconda3/envs/vpg/bin/python plot.py 'logs/TEN_THU_MUC_LOG'
+/home/aics/miniconda3/envs/vpg/bin/python main.py ...
 ```
-
-### 2. Tiếp Tục Huấn Luyện Từ Checkpoint Cũ (Resume)
-Kể từ bây giờ, tính năng học tiếp nối đã được **tích hợp tự động** vào script.
-Mỗi khi bạn chạy lệnh `run_training_gui.sh` (hoặc nhấn nút Run), hệ thống sẽ tự động tìm kiếm bộ não (file `.pth`) được lưu ở lần học gần nhất trong thư mục `logs/`. 
-- Nếu tìm thấy, robot sẽ **tự động học tiếp**.
-- Nếu thư mục `logs/` trống, robot sẽ **bắt đầu học lại từ đầu**.
-
-Do đó, bạn **chỉ cần sử dụng một lệnh duy nhất** như mục huấn luyện bình thường:
-```bash
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-./run_training_gui.sh
-```
-*(Nếu bạn muốn xóa trí nhớ để bắt đầu lại từ số 0, chỉ cần xóa thư mục `logs/` đi là được).*
-
-### 3. Chỉnh Sửa Scene (Giao diện 3D)
-Nếu bạn muốn mở phần mềm lên để thêm bớt đồ vật, thay đổi ánh sáng, chỉnh sửa bản đồ,... bạn chỉ cần chạy lệnh sau để mở giao diện:
-```bash
-cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"
-./edit_scene.sh
-```
-Sau khi phần mềm mở lên, bạn có thể chỉnh sửa và ấn `Ctrl + S` để lưu (vì đã cài bản Edu nên sẽ không bị báo lỗi yêu cầu License nữa).
-
----
-
-## 🛠️ Hướng Dẫn Khắc Phục Sự Cố (Troubleshooting)
-
-### 1. Lỗi bị kẹt lệnh, không hiện vật thể hoặc Connection Refused
-**Nguyên nhân:** Lỗi này 99% xảy ra do bạn đã bấm `Ctrl + C` để ngắt ngang một tiến trình đang chạy. Việc tắt đột ngột này sẽ làm phần mềm CoppeliaSim và các kịch bản python bị kẹt chạy ngầm (Zombie process), gây xung đột cổng mạng ở lần chạy tiếp theo.
-
-**Cách khắc phục:** Chạy lệnh dưới đây để "tiêu diệt" sạch sẽ toàn bộ các ứng dụng kẹt ngầm (bao gồm cả các launcher của phần mềm), sau đó bạn có thể chạy lại bình thường:
-```bash
-kill -9 $(pgrep -f "coppeliaSim") $(pgrep -f "main.py") $(pgrep -f "run_one_grasp_gui.py") $(pgrep -f "pythonLauncher.py")
-```
-
-### 2. Lỗi `No such file or directory` khi chạy Python
-* **Nguyên nhân**: Bạn chưa chạy lệnh `cd` vào thư mục `visual-pushing-grasping`.
-* **Cách sửa**: Chạy lệnh `cd "/home/aics/Màn hình nền/Rl_Bin_Picing/visual-pushing-grasping"` trước khi chạy lệnh gọi file `.py`.
-
-### 3. Lỗi `No module named 'coppeliasim_zmqremoteapi_client'` hoặc `ModuleNotFoundError`
-* **Nguyên nhân**: Bạn đang dùng lệnh `python` mặc định của hệ thống thay vì dùng môi trường ảo `vpg` (nơi chứa các thư viện điều khiển Robot).
-* **Cách sửa**: Hãy chắc chắn rằng bạn sử dụng đúng đường dẫn Python của môi trường ảo để chạy:
-```bash
-/home/aics/miniconda3/envs/vpg/bin/python run_one_grasp_gui.py
-```
-*(Hoặc gõ `conda activate vpg` trước khi chạy lệnh `python run_one_grasp_gui.py`)*
+*(Các file `.sh` tôi viết đã tự động bao bọc đường dẫn này cho bạn nên bạn không cần gõ lệnh dài dòng).*
