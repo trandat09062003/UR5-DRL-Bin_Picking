@@ -238,10 +238,13 @@ def main(args):
         empty_threshold = 300
         if is_sim and is_testing:
             empty_threshold = 10
-        if np.sum(stuff_count) < empty_threshold or (is_sim and not is_testing and no_change_count[0] + no_change_count[1] > 10):
+        if np.sum(stuff_count) < empty_threshold or (is_sim and not is_testing and no_change_count[0] + no_change_count[1] > 10) or (is_sim and not is_testing and prev_grasp_success):
             no_change_count = [0, 0]
             if is_sim:
-                print('Not enough objects in view (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
+                if not is_testing and prev_grasp_success:
+                    print('Gắp thành công! Tự động reset lại 10 vật thể mới cho đợt train tiếp theo...')
+                else:
+                    print('Not enough objects in view (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
                 robot.restart_sim()
                 robot.add_objects()
                 if is_testing: # If at end of test run, re-load original weights (before test run)
