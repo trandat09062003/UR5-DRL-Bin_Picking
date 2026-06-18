@@ -212,6 +212,7 @@ def main(args):
 
 
     # Start main training/testing loop
+    prev_grasp_success = False
     while True:
         print('\n%s iteration: %d' % ('Testing' if is_testing else 'Training', trainer.iteration))
         iteration_time_0 = time.time()
