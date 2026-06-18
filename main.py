@@ -238,7 +238,7 @@ def main(args):
         empty_threshold = 300
         if is_sim and is_testing:
             empty_threshold = 10
-        if np.sum(stuff_count) < empty_threshold or (is_sim and no_change_count[0] + no_change_count[1] > 10):
+        if np.sum(stuff_count) < empty_threshold or (is_sim and not is_testing and no_change_count[0] + no_change_count[1] > 10):
             no_change_count = [0, 0]
             if is_sim:
                 print('Not enough objects in view (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))

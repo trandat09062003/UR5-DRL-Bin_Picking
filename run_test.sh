@@ -19,25 +19,20 @@ echo "[INFO] Chờ 15 giây cho Simulator tải xong..."
 sleep 15
 
 # Tìm thư mục log mới nhất chứa model đã train
-LATEST_LOG=$(ls -td logs/*/ 2>/dev/null | head -1)
+# Tìm file snapshot mới nhất từ các đợt train trước
+SNAPSHOT_FILE=$(ls -t logs/*/models/snapshot-backup.reinforcement.pth 2>/dev/null | head -1)
 
-if [ ! -z "$LATEST_LOG" ]; then
-    SNAPSHOT_FILE="${LATEST_LOG}models/snapshot-backup.reinforcement.pth"
-    if [ -f "$SNAPSHOT_FILE" ]; then
-        echo "[INFO] Tìm thấy Model đã train tại $SNAPSHOT_FILE."
-        
-        # Test sẽ sinh ra 10 vật thể ngẫu nhiên trên bàn
-        CMD="/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --is_testing --load_snapshot --snapshot_file \"$SNAPSHOT_FILE\" --max_test_trials $MAX_TEST_TRIALS --num_obj 10 --specific_obj -1 --experience_replay --explore_rate_decay"
-        
-        echo "[INFO] Bắt đầu TEST $MAX_TEST_TRIALS lượt (Mỗi lượt dọn sạch 10 vật thể)..."
-        echo "[INFO] Đang chạy lệnh: $CMD"
+if [ ! -z "$SNAPSHOT_FILE" ]; then
+    echo "[INFO] Tìm thấy Model đã train tại $SNAPSHOT_FILE."
+    
+    # Test sẽ sinh ra 10 vật thể ngẫu nhiên trên bàn
+    CMD="/home/aics/miniconda3/envs/vpg/bin/python main.py --is_sim --is_testing --load_snapshot --snapshot_file \"$SNAPSHOT_FILE\" --max_test_trials $MAX_TEST_TRIALS --num_obj 10 --specific_obj -1 --experience_replay --explore_rate_decay"
+    
+    echo "[INFO] Bắt đầu TEST $MAX_TEST_TRIALS lượt (Mỗi lượt dọn sạch 10 vật thể)..."
+    echo "[INFO] Đang chạy lệnh: $CMD"
         eval $CMD
-        
-    else
-        echo "[ERROR] Không tìm thấy file model (snapshot.pth) trong thư mục $LATEST_LOG"
-    fi
 else
-    echo "[ERROR] Không tìm thấy thư mục logs/ nào chứa model đã train. Vui lòng train trước!"
+    echo "[ERROR] Không tìm thấy file model (snapshot-backup.reinforcement.pth) trong bất kỳ thư mục logs/ nào. Vui lòng train trước!"
 fi
 
 echo "[INFO] Đang đóng Simulator..."

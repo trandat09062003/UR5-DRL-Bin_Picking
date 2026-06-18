@@ -182,7 +182,7 @@ class Robot(object):
             curr_shape_name = 'shape_%02d' % object_idx
             # Tinh chỉnh tọa độ rơi để vật lọt vào giữa hộp (âm là sang phải, dương là sang trái)
             OFFSET_X = 0.0
-            OFFSET_Y = -0.08
+            OFFSET_Y = -0.2
             drop_x = (self.workspace_limits[0][1] - self.workspace_limits[0][0] - 0.2) * np.random.random_sample() + self.workspace_limits[0][0] + 0.1 + OFFSET_X
             drop_y = (self.workspace_limits[1][1] - self.workspace_limits[1][0] - 0.2) * np.random.random_sample() + self.workspace_limits[1][0] + 0.1 + OFFSET_Y
             object_position = [drop_x, drop_y, 0.15 + object_idx * 0.05]
@@ -747,6 +747,8 @@ class Robot(object):
                 bin_drop_position = [-0.45, 0.55, 0.3]
                 self.move_to(bin_drop_position, None)
                 self.open_gripper()
+                # Rút tay về giữa bàn để hệ thống không tưởng nhầm là tay bị lỗi văng ra ngoài
+                self.move_to([-0.5, 0.0, 0.3], None)
                 time.sleep(0.5)
 
         else:
